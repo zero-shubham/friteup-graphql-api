@@ -9,6 +9,7 @@ type_defs = gql("""
     input UpdateUserInput {
         email: String
         name: String
+        night_mode: Boolean
     }
     input UpdatePostInput {
         post_id: ID!

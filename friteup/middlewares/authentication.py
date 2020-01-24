@@ -26,7 +26,7 @@ def authentication_required(resolver):
 
 
 async def check_user_in_db(user_id: str, received_token: str):
-    token_in_db = await token.TokenBase.find_by_user_id(user_id)
+    token_in_db = await TokenBase.find_by_user_id(user_id)
     if token_in_db and token_in_db["token"] == received_token:
         return True
     return False
@@ -55,7 +55,6 @@ class UnAuthenticatedUser(BaseUser):
 # authenticates each request and provides an unique reuest id to each
 class BasicAuthBackend(AuthenticationBackend):
     async def authenticate(self, request):
-        # print("******", dir(request))
         ret_value = None
         if "Authorization" in request.cookies.keys() and request.cookies["Authorization"]:
             token = request.cookies["Authorization"].encode()
@@ -67,8 +66,11 @@ class BasicAuthBackend(AuthenticationBackend):
                 ret_value = AuthenticatedUser(
                     user_id=decoded_cookie["id"], expires=decoded_cookie["expire"]
                 )
-                token_db.set_token(ret_value.req_id, token,
-                                   decoded_cookie["expire"])
+                await token_db.set_token(
+                    ret_value.req_id,
+                    token,
+                    decoded_cookie["expire"]
+                )
             else:
                 ret_value = UnAuthenticatedUser()
 

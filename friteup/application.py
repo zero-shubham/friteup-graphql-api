@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from ariadne import make_executable_schema
 from ariadne.asgi import GraphQL
 from starlette.requests import Request
+from starlette.responses import JSONResponse
 from starlette.middleware.cors import CORSMiddleware
 from starlette.middleware.authentication import AuthenticationMiddleware
 from middlewares.authentication import BasicAuthBackend
@@ -25,9 +26,9 @@ schema = make_executable_schema(type_defs, [
 )
 
 origins = [
-    "http://localhost",
-    "http://localhost:8000",
+    "http://localhost:8000"
 ]
+
 
 app = FastAPI()
 app.mount("/graphql", GraphQL(schema, debug=True))
@@ -36,8 +37,15 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["POST", "GET", "OPTIONS"],
+    allow_headers=[
+        "Accept",
+        "Accept-Encoding",
+        "Authorization",
+        "Content-Type",
+        "Origin",
+        "User-Agent"
+    ]
 )
 app.add_middleware(
     AuthenticationMiddleware,
@@ -48,6 +56,7 @@ app.add_middleware(
 @app.middleware("http")
 async def cookie_set(request: Request, call_next):
     response = await call_next(request)
+    del_cookie_flag = False
     if request.user.req_id in token_db.db.keys():
         token = token_db.db[request.user.req_id]
         if token["valid"]:
@@ -58,6 +67,16 @@ async def cookie_set(request: Request, call_next):
                 httponly=True
             )
         else:
-            response.delete_cookie(key="Authorization", path="/", domain=None)
-            token_db.remove_token(request.user.req_id)
+            del_cookie_flag = True
+    else:
+        del_cookie_flag = True
+
+    if del_cookie_flag:
+        response.delete_cookie(
+            key="Authorization",
+            path="/",
+            domain=None
+        )
+
+    await token_db.remove_token(request.user.req_id)
     return response

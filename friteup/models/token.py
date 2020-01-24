@@ -26,7 +26,6 @@ class TokenBase(BaseModel):
     @classmethod
     async def delete(cls, user_id):
         deleted_token = await db.tokens.delete_one({"_id": user_id})
-        print(deleted_token.deleted_count, "---")
         if deleted_token.acknowledged:
             return True
         return None

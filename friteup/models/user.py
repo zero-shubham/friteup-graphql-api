@@ -20,6 +20,7 @@ class UserResponse(BaseModel):
     id: str
     name: str
     email: str
+    night_mode: bool
     posts: List[PostResponse]
 
 

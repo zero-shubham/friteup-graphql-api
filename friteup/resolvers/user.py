@@ -99,6 +99,7 @@ async def resolve_login(_, info, email, password):
             "expire": expires.timestamp()
         }
         access_token = jwt.encode(payload, "secret", algorithm='HS256')
+        await TokenBase.delete(checked_user.id)
         token_in_db = TokenBase(user_id=checked_user.id, token=access_token)
         await token_in_db.insert()
         expires_in_seconds = expires.timestamp() - now.timestamp()
@@ -118,10 +119,8 @@ async def resolve_logout(_, info, **kwargs):
     }
     current_user_id = kwargs.get("current_user_id", None)
     request = info.context["request"]
-    print(request.user.is_authenticated, current_user_id, kwargs)
     if request.user.is_authenticated and current_user_id:
         deleted = await TokenBase.delete(current_user_id)
-        print(deleted)
         if deleted:
             await token_db.invalidate_token(request.user.req_id)
             response["logged_out"] = True
@@ -153,17 +152,10 @@ async def resolve_update_user(_, info, **kwargs):
     update_data = kwargs.get("data", None)
     if user_id and update_data:
         user = await UserUpdates.find_by_id(user_id)
-        if user:
-            allowed_update_details = {
-                "night_mode": bool,
-                "name": str,
-                "email": str
-            }
-            for key in allowed_update_details:
-                if key in update_data:
-                    allowed_update_details[key] = update_data[key]
-            await user.update_user_details(allowed_update_details)
-    user_updated = UserInDB.find_by_id(user_id)
+        allowed_update_details = ["night_mode", "name", "email"]
+        if user and all([key in allowed_update_details for key in update_data.keys()]):
+            await user.update_user_details(update_data)
+    user_updated = await UserInDB.find_by_id(user_id)
     return user_updated
 
 
