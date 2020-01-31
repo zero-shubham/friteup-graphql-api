@@ -2,8 +2,10 @@ from ariadne import ObjectType, QueryType, MutationType
 import datetime
 
 from models.comment import CommentBase
-from models.post import PostBase, PostResponse, PostUpdates
-from models.user import UserInDB, UserUpdates
+from models.Post.PostBase import PostResponse, PostBase
+from models.Post.PostUpdates import PostUpdates
+from models.User.UserInDB import UserInDB
+from models.User.UserUpdates import UserUpdates
 from middlewares.authentication import authentication_required
 
 post_query = QueryType()
@@ -14,13 +16,16 @@ Post = ObjectType("Post")
 @post_query.field("post")
 @authentication_required
 async def resolve_post(_, info, **kwargs):
+    request = info.context["request"]
+    current_user_id = kwargs.get("current_user_id", None)
     user_id = kwargs.get("user_id", None)
     post_id = kwargs.get("post_id", None)
     post = None
+    is_auth = request.user.is_authenticated and current_user_id == user_id
     if post_id:
-        post = [await PostBase.find_by_id(post_id)]
+        post = [await PostBase.find_by_id(post_id, is_auth)]
     elif user_id:
-        post = await PostBase.find_by_user_id(user_id)
+        post = await PostBase.find_by_user_id(user_id, is_auth)
     return post
 
 
@@ -36,7 +41,13 @@ async def resolve_create_post(_, info, **kwargs):
         user = await UserUpdates.find_by_id(user_id)
         if user:
             now = datetime.datetime.now()
-            new_post = PostBase(user_id=user_id, text=text, createdAt=now.timestamp(), title=title, published=published)
+            new_post = PostBase(
+                user_id=user_id,
+                text=text,
+                createdAt=now.timestamp(),
+                title=title,
+                published=published
+            )
             new_post_id = await new_post.insert()
             await user.add_post(new_post_id)
             new_post = new_post.dict()

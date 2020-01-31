@@ -4,15 +4,18 @@ import jwt
 from starlette.requests import Request
 import datetime
 from starlette.config import Config
-
+from middlewares.authentication import authentication_required
 from models.comment import CommentBase
-from models.post import PostBase, PostUpdates
-from models.user import UserInDB, UserResponse, UserUpdates
-from models.token import TokenBase
+from models.Post.PostBase import PostBase
+from models.Post.PostUpdates import PostUpdates
+from models.User.UserInDB import UserInDB
+from models.User.UserUpdates import UserUpdates
+from models.User.UserResponse import UserResponse
 from models.token import TokenBase
 from utils.MyErrors import GenericError
 from utils.token_db import token_db
-from middlewares.authentication import authentication_required
+from db import db
+
 
 config = Config('.env')
 
@@ -27,13 +30,20 @@ User = ObjectType("User")
 @user_query.field("user")
 @authentication_required
 async def resolve_user(_, info, **kwargs):
+    request = info.context["request"]
     user_id = kwargs.get("current_user_id", None)
     email = kwargs.get("email", None)
     user = None
     if email:
-        user = await UserInDB.find_by_email(email)
+        user = await UserInDB.find_by_email(
+            email,
+            request.user.is_authenticated
+        )
     elif user_id:
-        user = await UserInDB.find_by_id(user_id)
+        user = await UserInDB.find_by_id(
+            user_id,
+            request.user.is_authenticated
+        )
     return user
 
 
@@ -44,15 +54,16 @@ async def resolve_users(_, info, **kwargs):
     emails = kwargs.get("emails", None)
     users = None
     if user_ids:
-        users = [UserInDB.find_by_id(user_id) for user_id in user_ids]
+        users = [UserInDB.find_by_id(user_id, False) for user_id in user_ids]
     elif emails:
-        users = [UserInDB.find_by_email(email) for email in emails]
+        users = [UserInDB.find_by_email(email, False) for email in emails]
     return users
 
 
 @user_query.field("user_validate")
 @authentication_required
 async def resolve_validate_user(_, info, **kwargs):
+    request = info.context["request"]
     current_user_id = kwargs.get("current_user_id", None)
     user_id = kwargs.get("user_id", None)
     response = {
@@ -60,16 +71,34 @@ async def resolve_validate_user(_, info, **kwargs):
         "valid": False
     }
     if user_id and current_user_id and user_id == current_user_id:
-        user = await UserInDB.find_by_id(current_user_id)
+        user = await UserInDB.find_by_id(
+            _id=current_user_id,
+            is_authenticated=request.user.is_authenticated
+        )
         user = user.dict()
         if user["id"] == user_id:
             response["valid"] = True
     return response
 
 
+@user_query.field("search")
+@authentication_required
+async def resolve_search(_, info, **kwargs):
+    keyword = kwargs.get("keyword", None)
+    current_user_id = kwargs.get("current_user_id", None)
+    resp = {
+        "users": [],
+        "posts": []
+    }
+    if keyword:
+        resp["users"] = await UserInDB.search_users(keyword, current_user_id)
+        resp["posts"] = await PostBase.search_posts(keyword)
+    return resp
+
+
 @user_mutation.field("create_user")
 async def resolve_create_user(_, info, data):
-    if await UserInDB.find_by_email(data["email"]):
+    if await UserInDB.find_by_email(data["email"], False):
         raise GenericError("User with that e-mail already exists!")
     user = UserInDB(name=data["name"],
                     email=data["email"], password=data["password"])
@@ -80,8 +109,9 @@ async def resolve_create_user(_, info, data):
     user = user.dict()
     user["id"] = str(inserted_user_id)
     all_posts = []
+    # todo: bad logic need to change
     for post_id in user["post_ids"]:
-        post = await PostBase.find_by_id(post_id)
+        post = await PostBase.find_by_id(post_id, False)
         all_posts.insert(post)
     user["posts"] = all_posts
     return UserResponse(**user)
@@ -90,7 +120,11 @@ async def resolve_create_user(_, info, data):
 @user_mutation.field("login")
 async def resolve_login(_, info, email, password):
     request = info.context["request"]
-    checked_user = await UserInDB.check_password(email, password)
+    checked_user = await UserInDB.check_password(
+        email,
+        password,
+        request.user.is_authenticated
+    )
     if checked_user:
         now = datetime.datetime.now()
         expires = now + datetime.timedelta(days=3)
@@ -151,24 +185,35 @@ async def resolve_update_user(_, info, **kwargs):
     user_id = kwargs.get("current_user_id", None)
     update_data = kwargs.get("data", None)
     if user_id and update_data:
-        user = await UserUpdates.find_by_id(user_id)
-        allowed_update_details = ["night_mode", "name", "email"]
-        if user and all([key in allowed_update_details for key in update_data.keys()]):
+        user = await UserUpdates.find_by_id(
+            _id=user_id
+        )
+        allowed_update_details = ["night_mode", "name", "email", "bio"]
+        if user and all(
+            [key in allowed_update_details for key in update_data.keys()]
+        ):
             await user.update_user_details(update_data)
-    user_updated = await UserInDB.find_by_id(user_id)
+    user_updated = await UserUpdates.find_by_id(
+        _id=user_id
+    )
     return user_updated
 
 
 @user_mutation.field("change_password")
 @authentication_required
 async def resolve_change_password(_, info, **kwargs):
+    request = info.context["request"]
     user_id = kwargs.get("current_user_id", None)
     old_password = kwargs.get("old_password", None)
     new_password = kwargs.get("new_password", None)
     if user_id and old_password and new_password:
         user = await UserUpdates.find_by_id(user_id)
         if user:
-            match_password = UserInDB.check_password(user.email, old_password)
+            match_password = await UserInDB.check_password(
+                user.email,
+                old_password,
+                request.user.is_authenticated
+            )
             if match_password:
                 done = await user.change_password(new_password)
                 return done

@@ -58,18 +58,17 @@ class BasicAuthBackend(AuthenticationBackend):
         ret_value = None
         if "Authorization" in request.cookies.keys() and request.cookies["Authorization"]:
             token = request.cookies["Authorization"].encode()
-            decoded_cookie = jwt.decode(token, "secret", algorithms=['HS256'])
-            match_token = await check_user_in_db(decoded_cookie["id"], token.decode())
+            decoded_token = jwt.decode(token, "secret", algorithms=['HS256'])
+            match_token = await check_user_in_db(decoded_token["id"], token.decode())
             now = datetime.datetime.now()
-            if match_token and now.timestamp() < decoded_cookie["expire"]:
-                # if there is a token then create ReqUser with appropriate details
+            if match_token and now.timestamp() < decoded_token["expire"]:
                 ret_value = AuthenticatedUser(
-                    user_id=decoded_cookie["id"], expires=decoded_cookie["expire"]
+                    user_id=decoded_token["id"], expires=decoded_token["expire"]
                 )
                 await token_db.set_token(
                     ret_value.req_id,
                     token,
-                    decoded_cookie["expire"]
+                    decoded_token["expire"]
                 )
             else:
                 ret_value = UnAuthenticatedUser()

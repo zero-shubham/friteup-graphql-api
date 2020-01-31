@@ -1,8 +1,8 @@
 from ariadne import ObjectType, QueryType, MutationType
 
 from models.comment import CommentBase
-from models.post import PostUpdates
-from models.user import UserUpdates
+from models.Post.PostUpdates import PostUpdates
+from models.User.UserUpdates import UserUpdates
 from middlewares.authentication import authentication_required
 
 comment_query = QueryType()

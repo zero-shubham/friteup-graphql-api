@@ -10,6 +10,7 @@ type_defs = gql("""
         email: String
         name: String
         night_mode: Boolean
+        bio: String
     }
     input UpdatePostInput {
         post_id: ID!
@@ -30,11 +31,17 @@ type_defs = gql("""
     type Response {
         message: String!
     }
+    type Search {
+        users: [User]
+        posts: [Post]
+    }
     type User {
         id: ID!
         email: String!
         name: String!
+        bio: String!
         night_mode: Boolean!
+        subscribers: [User]
         posts: [Post]
     }
     type Post {
@@ -44,6 +51,8 @@ type_defs = gql("""
         user: User!
         published: Boolean!
         createdAt: Float!
+        up_vote: Int!
+        down_vote: Int!
         comments: [Comment]
     }
     type Comment {
@@ -58,6 +67,7 @@ type_defs = gql("""
         users(emails: [String] user_ids: [String]): [User]!
         post(post_id: ID user_id:ID): [Post]
         comment(comment_id: ID): Comment
+        search(keyword: String!): Search
     }
     type Mutation {
         create_user(data: CreateUserInput!): User
