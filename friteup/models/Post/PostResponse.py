@@ -8,7 +8,7 @@ class PostResponse(BaseModel):
     text: str
     title: str
     user_id: str
-    createdAt: float
+    created_at: float
     published: bool
     up_vote: int
     down_vote: int

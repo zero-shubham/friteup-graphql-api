@@ -4,7 +4,9 @@ import jwt
 from starlette.requests import Request
 import datetime
 from starlette.config import Config
+
 from middlewares.authentication import authentication_required
+import utils.model_utils.user as UserUtils
 from models.comment import CommentBase
 from models.Post.PostBase import PostBase
 from models.Post.PostUpdates import PostUpdates
@@ -31,19 +33,24 @@ User = ObjectType("User")
 @authentication_required
 async def resolve_user(_, info, **kwargs):
     request = info.context["request"]
-    user_id = kwargs.get("current_user_id", None)
+    current_user_id = kwargs.get("current_user_id", None)
+    user_id = kwargs.get("user_id", None)
     email = kwargs.get("email", None)
     user = None
+    authenticated = (request.user.is_authenticated
+                     and
+                     current_user_id == user_id)
     if email:
-        user = await UserInDB.find_by_email(
+        user = await UserUtils.find_user_by_email(
             email,
-            request.user.is_authenticated
+            authenticated
         )
     elif user_id:
-        user = await UserInDB.find_by_id(
+        user = await UserUtils.find_user_by_id(
             user_id,
-            request.user.is_authenticated
+            authenticated
         )
+        user = UserResponse(**user)
     return user
 
 
@@ -54,9 +61,9 @@ async def resolve_users(_, info, **kwargs):
     emails = kwargs.get("emails", None)
     users = None
     if user_ids:
-        users = [UserInDB.find_by_id(user_id, False) for user_id in user_ids]
+        users = [UserUtils.find_user_by_id(user_id, False) for user_id in user_ids]
     elif emails:
-        users = [UserInDB.find_by_email(email, False) for email in emails]
+        users = [UserUtils.find_user_by_email(email, False) for email in emails]
     return users
 
 
@@ -71,7 +78,7 @@ async def resolve_validate_user(_, info, **kwargs):
         "valid": False
     }
     if user_id and current_user_id and user_id == current_user_id:
-        user = await UserInDB.find_by_id(
+        user = await UserUtils.find_user_by_id(
             _id=current_user_id,
             is_authenticated=request.user.is_authenticated
         )
@@ -96,9 +103,24 @@ async def resolve_search(_, info, **kwargs):
     return resp
 
 
+@user_query.field("feed")
+@authentication_required
+async def resolve_feed(_, info, **kwargs):
+    current_user_id = kwargs.get("current_user_id", None)
+    request = info.context["request"]
+    user = await UserUtils.find_user_by_id(
+        _id=current_user_id,
+        is_authenticated=request.user.is_authenticated
+    )
+    resp = []
+    if user:
+        resp = await user.get_feed()
+    return resp
+
+
 @user_mutation.field("create_user")
 async def resolve_create_user(_, info, data):
-    if await UserInDB.find_by_email(data["email"], False):
+    if await UserUtils.find_user_by_email(data["email"], False):
         raise GenericError("User with that e-mail already exists!")
     user = UserInDB(name=data["name"],
                     email=data["email"], password=data["password"])
@@ -111,7 +133,7 @@ async def resolve_create_user(_, info, data):
     all_posts = []
     # todo: bad logic need to change
     for post_id in user["post_ids"]:
-        post = await PostBase.find_by_id(post_id, False)
+        post = await find_by_id(post_id, False)
         all_posts.insert(post)
     user["posts"] = all_posts
     return UserResponse(**user)
@@ -220,9 +242,46 @@ async def resolve_change_password(_, info, **kwargs):
     return False
 
 
+@user_mutation.field("subscribe_user")
+@authentication_required
+async def resolve_subscribe_user(_, info, **kwargs):
+    current_user_id = kwargs.get("current_user_id", None)
+    user_id = kwargs.get("user_id", None)
+    user = await UserUpdates.find_by_id(user_id)
+    current_user = await UserUpdates.find_by_id(current_user_id)
+    if user and current_user:
+        # already subscribed handle error
+        if current_user_id in user.subscribers:
+            return False
+        # add error handling
+        done = await user.add_subscriber(current_user_id)
+        if done:
+            done = await current_user.add_subscribed(user_id)
+    return done
+
+
+@user_mutation.field("unsubscribe_user")
+@authentication_required
+async def resolve_unsubscribe_user(_, info, **kwargs):
+    current_user_id = kwargs.get("current_user_id", None)
+    user_id = kwargs.get("user_id", None)
+    user = await UserUpdates.find_by_id(user_id)
+    current_user = await UserUpdates.find_by_id(current_user_id)
+    if user and current_user:
+        # if current_user is not in subscribers list error
+        if current_user_id not in user.subscribers:
+            return False
+        # add error handling
+        done = await user.remove_subscriber(current_user_id)
+        if done:
+            done = await current_user.remove_subscribed(user_id)
+    return done
+
+
 @User.field("posts")
 async def resolve_posts(root, info):
-    return root.posts
+    print(root)
+    return root["posts"]
 
 
 # @user_subscription.source("count")

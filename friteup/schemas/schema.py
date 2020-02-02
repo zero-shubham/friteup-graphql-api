@@ -41,16 +41,18 @@ type_defs = gql("""
         name: String!
         bio: String!
         night_mode: Boolean!
-        subscribers: [User]
+        subscribers: [String]
+        subscribed: [String]
         posts: [Post]
     }
     type Post {
         id: ID!
         title: String!
         text: String!
-        user: User!
+        user_id: String!
+        user: User
         published: Boolean!
-        createdAt: Float!
+        created_at: Float!
         up_vote: Int!
         down_vote: Int!
         comments: [Comment]
@@ -64,10 +66,11 @@ type_defs = gql("""
     type Query {
         user_validate(user_id: ID): Validate
         user(email: String user_id: ID): User
-        users(emails: [String] user_ids: [String]): [User]!
+        users(emails: [String] user_ids: [ID]): [User]!
         post(post_id: ID user_id:ID): [Post]
         comment(comment_id: ID): Comment
         search(keyword: String!): Search
+        feed: [Post]
     }
     type Mutation {
         create_user(data: CreateUserInput!): User
@@ -82,6 +85,8 @@ type_defs = gql("""
         login(email: String! password: String!): Login
         logout: Logout
         change_password(old_password: String! new_password: String!): Boolean!
+        subscribe_user(user_id: ID!): Boolean!
+        unsubscribe_user(user_id: ID!): Boolean!
     }
     type Subscription{
         count: Int

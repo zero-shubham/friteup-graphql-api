@@ -3,6 +3,8 @@ import pymongo
 from bson import ObjectId
 from pydantic import BaseModel
 from werkzeug.security import generate_password_hash, check_password_hash
+
+import utils.model_utils.post as PostUtils
 from models.Post.PostBase import PostBase
 from models.Post.PostResponse import PostResponse
 from models.User.UserBase import UserBase
@@ -18,35 +20,11 @@ class UserInDB(UserBase):
         self.password = generate_password_hash(password)
 
     @classmethod
-    async def find_by_email(cls, email, is_authenticated):
-        user = await db.users.find_one({"email": email})
-        if user:
-            user["id"] = str(user["_id"])
-            user["posts"] = await PostBase.find_by_user_id(
-                user_id=user["id"],
-                is_authenticated=is_authenticated
-            )
-            return UserResponse(**user)
-        return None
-
-    @classmethod
-    async def find_by_id(cls, _id, is_authenticated):
-        user = await db.users.find_one({"_id": ObjectId(_id)})
-        if user:
-            user["id"] = str(user["_id"])
-            user["posts"] = await PostBase.find_by_user_id(
-                user_id=user["id"],
-                is_authenticated=is_authenticated
-            )
-            return UserResponse(**user)
-        return None
-
-    @classmethod
     async def check_password(cls, email, password, is_authenticated):
         user = await db.users.find_one({"email": email})
         if user and check_password_hash(user["password"], password):
             user["id"] = str(user["_id"])
-            user["posts"] = await PostBase.find_by_user_id(
+            user["posts"] = await PostUtils.find_posts_by_user_id(
                 user_id=user["id"],
                 is_authenticated=is_authenticated
             )
@@ -64,9 +42,9 @@ class UserInDB(UserBase):
             }).to_list(None)
 
         for user in users:
-            if user["_id"] != current_user_id:
+            if str(user["_id"]) != current_user_id:
                 user["id"] = str(user["_id"])
-                user["posts"] = await PostBase.find_by_user_id(
+                user["posts"] = await PostUtils.find_posts_by_user_id(
                     user_id=user["id"],
                     is_authenticated=False
                 )

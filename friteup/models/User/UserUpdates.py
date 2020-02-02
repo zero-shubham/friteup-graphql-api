@@ -58,3 +58,52 @@ class UserUpdates(BaseModel):
             }
         )
         return done.acknowledged
+
+    async def add_subscriber(self, user_id):
+        self.subscribers.append(user_id)
+        done = await db.users.update_one(
+            {"_id": ObjectId(self.id)},
+            {
+                "$set": {
+                    "subscribers": self.subscribers
+                }
+            }
+        )
+        return done.acknowledged
+
+    async def add_subscribed(self, user_id):
+        self.subscribed.append(user_id)
+        done = await db.users.update_one(
+            {"_id": ObjectId(self.id)},
+            {
+                "$set": {
+                    "subscribed": self.subscribed
+                }
+            }
+        )
+        return done.acknowledged
+    
+    async def remove_subscriber(self, user_id):
+        self.subscribers.remove(user_id)
+        done = await db.users.update_one(
+            {"_id": ObjectId(self.id)},
+            {
+                "$set": {
+                    "subscribers": self.subscribers
+                }
+            }
+        )
+        return done.acknowledged
+
+    async def remove_subscribed(self, user_id):
+        self.subscribed.remove(user_id)
+        done = await db.users.update_one(
+            {"_id": ObjectId(self.id)},
+            {
+                "$set": {
+                    "subscribed": self.subscribed
+                }
+            }
+        )
+        return done.acknowledged
+    

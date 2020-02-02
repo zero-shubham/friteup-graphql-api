@@ -1,6 +1,7 @@
 from ariadne import ObjectType, QueryType, MutationType
 import datetime
 
+import utils.model_utils.post as PostUtils
 from models.comment import CommentBase
 from models.Post.PostBase import PostResponse, PostBase
 from models.Post.PostUpdates import PostUpdates
@@ -23,9 +24,9 @@ async def resolve_post(_, info, **kwargs):
     post = None
     is_auth = request.user.is_authenticated and current_user_id == user_id
     if post_id:
-        post = [await PostBase.find_by_id(post_id, is_auth)]
+        post = [await PostUtils.find_posts_by_id(post_id, is_auth)]
     elif user_id:
-        post = await PostBase.find_by_user_id(user_id, is_auth)
+        post = await PostUtils.find_posts_by_user_id(user_id, is_auth)
     return post
 
 
@@ -44,7 +45,7 @@ async def resolve_create_post(_, info, **kwargs):
             new_post = PostBase(
                 user_id=user_id,
                 text=text,
-                createdAt=now.timestamp(),
+                created_at=now.timestamp(),
                 title=title,
                 published=published
             )
