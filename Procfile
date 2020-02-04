@@ -1,1 +1,1 @@
-uvicorn application:app
+cd ./friteup && uvicorn application:app
