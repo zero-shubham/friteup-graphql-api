@@ -1,1 +1,1 @@
-cd ./friteup && python application.py
+web: python ./friteup/application.py
