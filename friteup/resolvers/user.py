@@ -16,7 +16,6 @@ from models.User.UserResponse import UserResponse
 from models.token import TokenBase
 from utils.MyErrors import GenericError
 from utils.token_db import token_db
-from db import db
 
 
 config = Config('.env')

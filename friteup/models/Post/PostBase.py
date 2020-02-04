@@ -3,12 +3,12 @@ from pydantic import BaseModel
 from typing import List, Any
 import pymongo
 
-from db import db
 import utils.model_utils.user as UserUtils
 from models.comment import CommentBase, CommentResponse
 from models.User.UserResponse import UserResponse
 from models.Post.PostResponse import PostResponse
 from models.Post.PostResponseWithUser import PostResponseWithUser
+from db.mongodb import get_database
 
 
 class PostBase(BaseModel):
@@ -26,6 +26,7 @@ class PostBase(BaseModel):
 
     @classmethod
     async def search_posts(cls, keyword):
+        db = await get_database()
         resp = []
         posts = await db.posts.find(
             {
@@ -45,6 +46,7 @@ class PostBase(BaseModel):
         return resp
 
     async def add_comment(self, comment_id: str, user_id: str):
+        db = await get_database()
         self.comment_ids.append(comment_id)
         done = await db.users.update_one({"_id": ObjectId(user_id)},
                                          {"$set": {
@@ -53,6 +55,7 @@ class PostBase(BaseModel):
         return done
 
     async def insert(self):
+        db = await get_database()
         row = await db.posts.insert_one(self.dict())
         if row.acknowledged:
             await db.posts.create_index([

@@ -1,5 +1,6 @@
 import os
 import uvicorn
+from db.mongodb_utils import close_mongo_connection, connect_to_mongo
 from fastapi import FastAPI
 from ariadne import make_executable_schema
 from ariadne.asgi import GraphQL
@@ -49,6 +50,8 @@ app.add_middleware(
         "User-Agent"
     ]
 )
+app.add_event_handler("startup", connect_to_mongo)
+app.add_event_handler("shutdown", close_mongo_connection)
 app.add_middleware(
     AuthenticationMiddleware,
     backend=BasicAuthBackend()
@@ -85,4 +88,5 @@ async def cookie_set(request: Request, call_next):
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
-    uvicorn.run("application:app", host="0.0.0.0", port=port, log_level="info")
+    uvicorn.run("application:app", host="0.0.0.0",
+                port=port, log_level="info", loop="asyncio")

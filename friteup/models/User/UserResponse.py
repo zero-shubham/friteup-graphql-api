@@ -1,6 +1,5 @@
 from pydantic import BaseModel
 from typing import Any, List
-from db import db
 from bson import ObjectId
 
 import utils.model_utils.user as UserUtils

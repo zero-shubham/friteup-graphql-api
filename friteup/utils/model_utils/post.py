@@ -1,13 +1,14 @@
 from bson import ObjectId
 
-from db import db
 from models.Post.PostResponse import PostResponse
 from models.Post.PostResponseWithUser import PostResponseWithUser
 from models.comment import CommentBase
 import utils.model_utils.user as UserUtils
+from db.mongodb import get_database
 
 
 async def find_posts_by_id(_id, is_authenticated, with_user=False):
+    db = await get_database()
     post = None
     if is_authenticated:
         post = await db.posts.find_one({"_id": ObjectId(_id)})
@@ -37,6 +38,7 @@ async def find_posts_by_user_id(
     is_authenticated,
     with_user=False
 ):
+    db = await get_database()
     # if the req is authenticated then send back all the posts else send
     # only published posts
     posts = None

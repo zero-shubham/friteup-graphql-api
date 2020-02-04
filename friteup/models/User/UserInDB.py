@@ -9,7 +9,7 @@ from models.Post.PostBase import PostBase
 from models.Post.PostResponse import PostResponse
 from models.User.UserBase import UserBase
 from models.User.UserResponse import UserResponse
-from db import db
+from db.mongodb import get_database
 
 
 class UserInDB(UserBase):
@@ -21,6 +21,7 @@ class UserInDB(UserBase):
 
     @classmethod
     async def check_password(cls, email, password, is_authenticated):
+        db = await get_database()
         user = await db.users.find_one({"email": email})
         if user and check_password_hash(user["password"], password):
             user["id"] = str(user["_id"])
@@ -33,6 +34,7 @@ class UserInDB(UserBase):
 
     @classmethod
     async def search_users(cls, keyword, current_user_id):
+        db = await get_database()
         resp = []
         users = await db.users.find(
             {
@@ -52,6 +54,7 @@ class UserInDB(UserBase):
         return resp
 
     async def insert(self):
+        db = await get_database()
         row = await db.users.insert_one(self.dict())
         if row.acknowledged:
             await db.users.create_index([("name", pymongo.TEXT)])

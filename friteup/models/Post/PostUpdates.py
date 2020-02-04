@@ -1,8 +1,8 @@
 from pydantic import BaseModel
 from bson import ObjectId
-from db import db
 from typing import Any, List
 from models.comment import CommentBase
+from db.mongodb import get_database
 
 
 class PostUpdates(BaseModel):
@@ -17,6 +17,7 @@ class PostUpdates(BaseModel):
 
     @classmethod
     async def find_by_id(cls, _id: str):
+        db = await get_database()
         post = await db.posts.find_one({"_id": ObjectId(_id)})
         if post:
             post["id"] = str(post["_id"])
@@ -25,6 +26,7 @@ class PostUpdates(BaseModel):
 
     @classmethod
     async def find_by_user_id(cls, user_id):
+        db = await get_database()
         posts_count = await db.posts.count_documents({"user_id": user_id})
         posts = await db.posts.find({"user_id": user_id}).to_list(posts_count)
         if posts:
@@ -40,6 +42,7 @@ class PostUpdates(BaseModel):
         return []
 
     async def add_comment(self, comment_id: str):
+        db = await get_database()
         self.comment_ids.append(comment_id)
         done = await db.posts.update_one({"_id": ObjectId(self.id)},
                                          {"$set": {
@@ -48,11 +51,13 @@ class PostUpdates(BaseModel):
         return done
 
     async def delete(self):
+        db = await get_database()
         await CommentBase.delete_all_comments_for_post(self.id)
         done = await db.posts.delete_one({"_id": self.id})
         return done.acknowledged
 
     async def vote(self, vote_type, user_id):
+        db = await get_database()
         if vote_type == "UP_VOTE":
             if user_id in self.up_vote:
                 self.up_vote.remove(user_id)
@@ -75,5 +80,6 @@ class PostUpdates(BaseModel):
 
     @classmethod
     async def delete_all_posts_for_user(cls, user_id):
+        db = await get_database()
         done = await db.posts.delete_many({"user_id": user_id})
         return done.acknowledged

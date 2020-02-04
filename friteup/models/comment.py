@@ -1,6 +1,6 @@
 from bson import ObjectId
 from pydantic import BaseModel
-from db import db
+from db.mongodb import get_database
 
 
 class CommentResponse(BaseModel):
@@ -17,6 +17,7 @@ class CommentBase(BaseModel):
 
     @classmethod
     async def find_by_id(cls, _id):
+        db = await get_database()
         comment = await db.comments.find_one({"_id": ObjectId(_id)})
         if comment:
             comment["id"] = str(comment["_id"])
@@ -25,6 +26,7 @@ class CommentBase(BaseModel):
 
     @classmethod
     async def find_by_post_id(cls, post_id):
+        db = await get_database()
         comments_count = await db.comments.count_documents({"post_id": post_id})
         comments = await db.comments.find({"post_id": post_id}).to_list(comments_count)
         all_comments = []
@@ -36,6 +38,7 @@ class CommentBase(BaseModel):
 
     @classmethod
     async def find_by_user_id(cls, user_id):
+        db = await get_database()
         comments_count = await db.comments.count_documents({"user_id": user_id})
         comments = await db.comments.find({"user_id": user_id}).to_list(comments_count)
         all_comments = []
@@ -46,6 +49,7 @@ class CommentBase(BaseModel):
         return all_comments
 
     async def insert(self):
+        db = await get_database()
         row = await db.comments.insert_one(self.dict())
         if row.acknowledged:
             return row.inserted_id
@@ -53,15 +57,18 @@ class CommentBase(BaseModel):
 
     @classmethod
     async def delete(cls, comment_id: str):
+        db = await get_database()
         done = await db.comments.delete_one({"_id": ObjectId(comment_id)})
         return done.acknowledged
 
     @classmethod
     async def delete_all_comments_for_user(cls, user_id):
+        db = await get_database()
         done = await db.comments.delete_many({"user_id": user_id})
         return done.acknowledged
 
     @classmethod
     async def delete_all_comments_for_post(cls, post_id):
+        db = await get_database()
         done = await db.comments.delete_many({"post_id": post_id})
         return done.acknowledged
