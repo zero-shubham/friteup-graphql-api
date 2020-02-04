@@ -1,3 +1,5 @@
+import os
+import uvicorn
 from fastapi import FastAPI
 from ariadne import make_executable_schema
 from ariadne.asgi import GraphQL
@@ -80,3 +82,7 @@ async def cookie_set(request: Request, call_next):
 
     await token_db.remove_token(request.user.req_id)
     return response
+
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 5000))
+    uvicorn.run("application:app", host="127.0.0.1", port=port, log_level="info")

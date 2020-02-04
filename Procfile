@@ -1,1 +1,1 @@
-cd ./friteup && uvicorn application:app
+cd ./friteup && python application.py
