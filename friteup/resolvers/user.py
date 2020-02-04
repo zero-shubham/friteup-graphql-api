@@ -181,17 +181,24 @@ async def resolve_logout(_, info, **kwargs):
 @authentication_required
 async def resolve_delete_user(_, info, **kwargs):
     user_id = kwargs.get("current_user_id", None)
-    email = kwargs.get("email", None)
-    result = None
-    if user_id and email:
+    result = False
+    if user_id:
         user = await UserUpdates.find_by_id(user_id)
-        if user.email == email:
+        if user:
             # error handling
             await PostUpdates.delete_all_posts_for_user(user_id)
             await CommentBase.delete_all_comments_for_user(user_id)
+            for subscriber_id in user.subscribers:
+                subscriber_user = await UserUpdates.find_by_id(subscriber_id)
+                await subscriber_user.remove_subscribed(user_id)
+                await user.remove_subscriber(subscriber_id)
+            for subscribed_id in user.subscribed:
+                subscribed_user = await UserUpdates.find_by_id(subscribed_id)
+                await subscribed_user.remove_subscriber(user_id)
+                await user.remove_subscribed(subscribed_id)
             done = await user.delete()
             if done:
-                result = user.dict()
+                result = True
     return result
 
 

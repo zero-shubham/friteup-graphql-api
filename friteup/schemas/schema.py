@@ -83,7 +83,7 @@ type_defs = gql("""
         update_user(data: UpdateUserInput!): User
         update_post(data: UpdatePostInput!): Post
         update_comment(comment_id: ID! text: String!): Comment
-        delete_user(email: String!): User
+        delete_user: Boolean!
         delete_comment(comment_id: ID!): Comment
         delete_post(post_id:  ID!): Post
         login(email: String! password: String!): Login

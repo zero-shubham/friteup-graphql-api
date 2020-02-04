@@ -88,7 +88,6 @@ async def resolve_vote_post(_, info, **kwargs):
         done = await post.vote(vote_type, current_user_id)
     if done:
         updated_post = await PostUtils.find_posts_by_id(post_id, False, True)
-    print(done, vote_type)
     return updated_post
 
 

@@ -75,5 +75,5 @@ class PostUpdates(BaseModel):
 
     @classmethod
     async def delete_all_posts_for_user(cls, user_id):
-        done = db.posts.delete_many({"user_id": user_id})
+        done = await db.posts.delete_many({"user_id": user_id})
         return done.acknowledged

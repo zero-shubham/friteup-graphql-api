@@ -26,6 +26,9 @@ class UserResponse(BaseModel):
             )
             posts.extend(subscribed_user.posts)
         posts.extend(self.posts)
-        posts = sorted(posts, key=lambda i: i.dict()["created_at"], reverse=True)
-        print(posts, "<===")
+        posts = sorted(
+            posts,
+            key=lambda i: i.dict()["created_at"],
+            reverse=True
+        )
         return posts

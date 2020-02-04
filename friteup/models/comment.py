@@ -58,10 +58,10 @@ class CommentBase(BaseModel):
 
     @classmethod
     async def delete_all_comments_for_user(cls, user_id):
-        done = db.comments.delete_many({"user_id": user_id})
+        done = await db.comments.delete_many({"user_id": user_id})
         return done.acknowledged
 
     @classmethod
     async def delete_all_comments_for_post(cls, post_id):
-        done = db.comments.delete_many({"post_id": post_id})
+        done = await db.comments.delete_many({"post_id": post_id})
         return done.acknowledged
