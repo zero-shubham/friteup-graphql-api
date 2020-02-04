@@ -76,6 +76,22 @@ async def resolve_delete_post(_, info, **kwargs):
         return post
 
 
+@post_mutation.field("vote_post")
+@authentication_required
+async def resolve_vote_post(_, info, **kwargs):
+    current_user_id = kwargs.get("current_user_id", None)
+    post_id = kwargs.get("post_id", None)
+    vote_type = kwargs.get("vote_type", None)
+    post = await PostUpdates.find_by_id(_id=post_id)
+    done = False
+    if post and vote_type:
+        done = await post.vote(vote_type, current_user_id)
+    if done:
+        updated_post = await PostUtils.find_posts_by_id(post_id, False, True)
+    print(done, vote_type)
+    return updated_post
+
+
 @Post.field("comments")
 async def resolve_comments(root, info):
     return root.comments

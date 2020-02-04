@@ -20,8 +20,12 @@ class UserResponse(BaseModel):
     async def get_feed(self):
         posts = []
         for subscribed_user_id in self.subscribed:
-            subscribed_user = await UserUtils.find_user_by_id(subscribed_user_id, False)
-            subscribed_user = UserResponse(**subscribed_user)
-            posts.append(subscribed_user.posts)
-        posts = sorted(posts, key=lambda i: i["created_at"])
+            subscribed_user = await UserUtils.find_user_by_id(
+                subscribed_user_id,
+                False
+            )
+            posts.extend(subscribed_user.posts)
+        posts.extend(self.posts)
+        posts = sorted(posts, key=lambda i: i.dict()["created_at"], reverse=True)
+        print(posts, "<===")
         return posts

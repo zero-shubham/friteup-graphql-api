@@ -1,6 +1,10 @@
 from ariadne import gql
 
 type_defs = gql("""
+    enum VoteTypes {
+        UP_VOTE
+        DOWN_VOTE
+    }
     input CreateUserInput {
         name: String!
         email: String!
@@ -53,8 +57,8 @@ type_defs = gql("""
         user: User
         published: Boolean!
         created_at: Float!
-        up_vote: Int!
-        down_vote: Int!
+        up_vote: [String]
+        down_vote: [String]
         comments: [Comment]
     }
     type Comment {
@@ -87,6 +91,7 @@ type_defs = gql("""
         change_password(old_password: String! new_password: String!): Boolean!
         subscribe_user(user_id: ID!): Boolean!
         unsubscribe_user(user_id: ID!): Boolean!
+        vote_post(post_id: ID! vote_type: VoteTypes!): Post
     }
     type Subscription{
         count: Int

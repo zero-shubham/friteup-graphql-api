@@ -50,7 +50,6 @@ async def resolve_user(_, info, **kwargs):
             user_id,
             authenticated
         )
-        user = UserResponse(**user)
     return user
 
 
@@ -61,9 +60,9 @@ async def resolve_users(_, info, **kwargs):
     emails = kwargs.get("emails", None)
     users = None
     if user_ids:
-        users = [UserUtils.find_user_by_id(user_id, False) for user_id in user_ids]
+        users = [await UserUtils.find_user_by_id(user_id, False) for user_id in user_ids]
     elif emails:
-        users = [UserUtils.find_user_by_email(email, False) for email in emails]
+        users = [await UserUtils.find_user_by_email(email, False) for email in emails]
     return users
 
 
@@ -130,12 +129,7 @@ async def resolve_create_user(_, info, data):
         raise GenericError("Something went wrong!")
     user = user.dict()
     user["id"] = str(inserted_user_id)
-    all_posts = []
-    # todo: bad logic need to change
-    for post_id in user["post_ids"]:
-        post = await find_by_id(post_id, False)
-        all_posts.insert(post)
-    user["posts"] = all_posts
+    user["posts"] = []
     return UserResponse(**user)
 
 
@@ -164,7 +158,7 @@ async def resolve_login(_, info, email, password):
             access_token,
             expires_in_seconds
         )
-        return {"user": checked_user.dict()}
+        return {"user": checked_user}
 
 
 @user_mutation.field("logout")
@@ -280,8 +274,7 @@ async def resolve_unsubscribe_user(_, info, **kwargs):
 
 @User.field("posts")
 async def resolve_posts(root, info):
-    print(root)
-    return root["posts"]
+    return root.posts
 
 
 # @user_subscription.source("count")

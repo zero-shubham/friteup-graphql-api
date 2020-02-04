@@ -11,8 +11,8 @@ class PostUpdates(BaseModel):
     title: str
     user_id: str
     published: bool
-    up_vote: int
-    down_vote: int
+    up_vote: List[str]
+    down_vote: List[str]
     comment_ids: List[str] = []
 
     @classmethod
@@ -50,6 +50,27 @@ class PostUpdates(BaseModel):
     async def delete(self):
         await CommentBase.delete_all_comments_for_post(self.id)
         done = await db.posts.delete_one({"_id": self.id})
+        return done.acknowledged
+
+    async def vote(self, vote_type, user_id):
+        if vote_type == "UP_VOTE":
+            if user_id in self.up_vote:
+                self.up_vote.remove(user_id)
+            else:
+                if user_id in self.down_vote:
+                    self.down_vote.remove(user_id)
+                self.up_vote.append(user_id)
+        elif vote_type == "DOWN_VOTE":
+            if user_id in self.down_vote:
+                self.down_vote.remove(user_id)
+            else:
+                if user_id in self.up_vote:
+                    self.up_vote.remove(user_id)
+                self.down_vote.append(user_id)
+        done = await db.posts.update_one(
+            {"_id": ObjectId(self.id)},
+            {"$set": {"up_vote": self.up_vote, "down_vote": self.down_vote}}
+        )
         return done.acknowledged
 
     @classmethod

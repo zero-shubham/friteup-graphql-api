@@ -21,10 +21,12 @@ async def find_user_by_id(_id, is_authenticated, posts=True):
     user = await db.users.find_one({"_id": ObjectId(_id)})
     if user:
         user["id"] = str(user["_id"])
+        user["posts"] = []
         if posts:
             user["posts"] = await PostUtils.find_posts_by_user_id(
                 user_id=user["id"],
-                is_authenticated=is_authenticated
+                is_authenticated=is_authenticated,
+                with_user=True
             )
         return UserResponse(**user)
     return None

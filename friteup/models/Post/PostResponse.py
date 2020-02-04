@@ -10,6 +10,6 @@ class PostResponse(BaseModel):
     user_id: str
     created_at: float
     published: bool
-    up_vote: int
-    down_vote: int
+    up_vote: List[str]
+    down_vote: List[str]
     comments: List[CommentResponse]

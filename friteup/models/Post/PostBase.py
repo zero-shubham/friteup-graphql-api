@@ -17,8 +17,8 @@ class PostBase(BaseModel):
     created_at: float
     published: bool
     user_id: str
-    up_vote: int = 0
-    down_vote: int = 0
+    up_vote: List[str] = []
+    down_vote: List[str] = []
     comment_ids: List[str] = []
 
     def add_new_comment(self, comment_id):
