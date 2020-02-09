@@ -29,7 +29,8 @@ schema = make_executable_schema(type_defs, [
 )
 
 origins = [
-    "http://localhost:8000"
+    "http://localhost:8000",
+    "https://friteup.shubhambiswas.com"
 ]
 
 
